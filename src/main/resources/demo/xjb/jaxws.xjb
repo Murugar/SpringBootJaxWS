@@ -1,0 +1,5 @@
+<bindings xmlns="http://java.sun.com/xml/ns/jaxws"
+          wsdlLocation="../wsdl/DemoService.wsdl"
+          version="2.1">
+  <package name="com.iqmsoft.demo.service"/>
+</bindings>

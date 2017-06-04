@@ -1,0 +1,96 @@
+buildscript {
+    ext {
+        springBootVersion = '1.5.3.RELEASE'
+    }
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}") 
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'eclipse-wtp'
+apply plugin: 'eclipse'
+
+ext {
+    generatedDir = 'src/generated'
+    generatedSourcesDir = "${generatedDir}/java"
+}
+
+configurations {
+    wsimport
+}
+
+jar {
+    baseName = 'spring-boot-jaxws-demo'
+    version = '0.0.2-SNAPSHOT'
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    applicationDefaultJvmArgs = [
+            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
+    ]
+}
+
+dependencies {
+    compile 'org.springframework.boot:spring-boot-starter-web'
+    compile 'javax.xml.ws:jaxws-api:2.2.11'
+    compile 'com.sun.xml.ws:jaxws-rt:2.2.10'
+    compile 'com.revinate:jaxws-spring:1.0.0'
+
+    wsimport 'com.sun.xml.ws:jaxws-tools:2.2.10'
+}
+
+bootRun { task ->
+    if (project.hasProperty('args')) {
+        args project.args.split('\\s+')
+    }
+}
+
+task generateSources {
+    ext.wsdlFile = "src/main/resources/demo/wsdl/DemoService.wsdl"
+    ext.wsdlLocation = "/demo/wsdl/DemoService.wsdl"
+    ext.bindingDir = "src/main/resources/demo/xjb"
+
+    doLast {
+        ant {
+            taskdef name: "wsimport",
+                    classname: "com.sun.tools.ws.ant.WsImport",
+                    classpath: configurations.wsimport.asPath
+
+            mkdir(dir: generatedSourcesDir)
+
+            wsimport(sourcedestdir: generatedSourcesDir,
+                     wsdl: wsdlFile,
+                     wsdlLocation: wsdlLocation,
+                     keep: true,
+                     xnocompile: true) {
+                binding(dir: bindingDir, includes: "*.xjb")
+            }
+        }
+    }
+}
+
+task cleanGenerated(type: Delete) {
+    delete generatedDir
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.3'
+}
+
+clean.dependsOn cleanGenerated
+compileJava {
+    dependsOn generateSources
+    source generatedSourcesDir
+}
